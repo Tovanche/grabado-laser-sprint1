@@ -1,0 +1,70 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f5f5;
+  margin: 0;
+  padding: 20px;
+}
+
+.app {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.nav button {
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.lista-productos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.tarjeta {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 14px;
+  width: 200px;
+}
+
+label {
+  display: block;
+  margin: 10px 0;
+}
+
+input,
+textarea {
+  display: block;
+  width: 100%;
+  padding: 6px;
+  margin-top: 4px;
+}
+
+.vista-previa {
+  margin: 20px 0;
+}
+
+.recuadro-grabado {
+  border: 2px dashed #b06a3a;
+  padding: 30px;
+  text-align: center;
+  color: #b06a3a;
+  font-size: 1.2rem;
+}
+
+button {
+  background: #b06a3a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
