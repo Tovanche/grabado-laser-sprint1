@@ -68,3 +68,30 @@ button {
   padding: 8px 14px;
   cursor: pointer;
 }
+
+/* HS-01: botones del filtro por categoría */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.filtros button {
+  background: white;
+  color: #b06a3a;
+  border: 1px solid #b06a3a;
+}
+
+.filtros button.activo {
+  background: #b06a3a;
+  color: white;
+}
+
+/* HS-02: selector de estilo de letra */
+select {
+  display: block;
+  width: 100%;
+  padding: 6px;
+  margin-top: 4px;
+}
