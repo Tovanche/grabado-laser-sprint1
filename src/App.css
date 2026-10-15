@@ -95,3 +95,25 @@ select {
   padding: 6px;
   margin-top: 4px;
 }
+
+/* HS-03: vista previa del grabado sobre el producto */
+.vista-producto {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  margin: 8px auto 16px;
+  background: #faf6f1;
+  border: 1px dashed #b06a3a;
+  border-radius: 8px;
+}
+
+/* HS-09: mensaje de error del envío */
+.error {
+  color: #b3261e;
+  font-weight: bold;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
