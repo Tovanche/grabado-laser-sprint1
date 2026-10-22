@@ -117,3 +117,78 @@ button:disabled {
   opacity: 0.6;
   cursor: wait;
 }
+
+/* HS-11: diseño responsivo */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.lista-productos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.lista-productos .tarjeta {
+  width: auto;
+}
+
+.tarjeta {
+  max-width: 100%;
+}
+
+.tarjeta-ancha {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* tabletas */
+@media (max-width: 768px) {
+  body {
+    padding: 14px;
+  }
+
+  .nav {
+    flex-wrap: wrap;
+  }
+
+  .nav button {
+    flex: 1 1 auto;
+  }
+}
+
+/* celulares */
+@media (max-width: 480px) {
+  body {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+  }
+
+  h2 {
+    font-size: 1.3rem;
+  }
+
+  .lista-productos {
+    grid-template-columns: 1fr;
+  }
+
+  .tarjeta-ancha {
+    max-width: none;
+  }
+
+  button,
+  select,
+  input,
+  textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .recuadro-grabado {
+    padding: 18px;
+  }
+}

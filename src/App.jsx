@@ -104,6 +104,53 @@ function VistaProducto({ producto, texto, fuente }) {
 // VITE_FORM_URL=https://formspree.io/f/xxxxxxxx
 const URL_FORMULARIO = import.meta.env.VITE_FORM_URL || "https://formspree.io/f/xbgdpdwq";
 
+// HS-13: manda un mensaje al correo del negocio por medio del servicio de formularios
+async function enviarAlNegocio(datos) {
+  if (!URL_FORMULARIO) throw new Error("Falta la variable VITE_FORM_URL");
+  const respuesta = await fetch(URL_FORMULARIO, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(datos),
+  });
+  if (!respuesta.ok) throw new Error("Respuesta no válida");
+}
+
+// HS-06: las cuentas se guardan en el navegador (localStorage), sin servidor.
+const CLAVE_USUARIOS = "gd_usuarios";
+const CLAVE_SESION = "gd_sesion";
+
+function leerAlmacen(clave, valorInicial) {
+  try {
+    const guardado = localStorage.getItem(clave);
+    return guardado ? JSON.parse(guardado) : valorInicial;
+  } catch (error) {
+    return valorInicial;
+  }
+}
+
+function guardarAlmacen(clave, valor) {
+  try {
+    localStorage.setItem(clave, JSON.stringify(valor));
+  } catch (error) {
+    // si el navegador bloquea el almacenamiento, la sesión dura solo mientras la página está abierta
+  }
+}
+
+// busca al usuario con sesión iniciada (si existe)
+function leerSesion() {
+  const correo = leerAlmacen(CLAVE_SESION, null);
+  return leerAlmacen(CLAVE_USUARIOS, []).find((u) => u.correo === correo) || null;
+}
+
+// la contraseña no se guarda en texto: se guarda su huella SHA-256
+async function huellaDe(texto) {
+  const datos = new TextEncoder().encode(texto);
+  const resumen = await crypto.subtle.digest("SHA-256", datos);
+  return Array.from(new Uint8Array(resumen))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 function App() {
   const [vista, setVista] = useState("catalogo");
 
@@ -120,15 +167,32 @@ function App() {
   const [carrito, setCarrito] = useState([]);
 
   // HS-09: ahora el formulario también pide la cantidad
-  const [formulario, setFormulario] = useState({ nombre: "", correo: "", cantidad: 1, mensaje: "" });
+  // HS-06: si hay una sesión iniciada, el nombre y el correo se rellenan solos
+  const [formulario, setFormulario] = useState(() => {
+    const sesion = leerSesion();
+    return { nombre: sesion ? sesion.nombre : "", correo: sesion ? sesion.correo : "", cantidad: 1, mensaje: "" };
+  });
   const [enviado, setEnviado] = useState(false);
   // HS-09: estados del envío real
   const [enviando, setEnviando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState("");
 
   // HS-05a: datos de contacto del checkout y pedido confirmado
-  const [datosPedido, setDatosPedido] = useState({ nombre: "", correo: "", telefono: "", direccion: "" });
+  const [datosPedido, setDatosPedido] = useState(() => {
+    const sesion = leerSesion();
+    return { nombre: sesion ? sesion.nombre : "", correo: sesion ? sesion.correo : "", telefono: "", direccion: "" };
+  });
   const [pedido, setPedido] = useState(null);
+
+  // HS-13: estado del aviso de pedido por correo
+  const [enviandoPedido, setEnviandoPedido] = useState(false);
+  const [errorPedido, setErrorPedido] = useState("");
+
+  // HS-06: sesión, modo de la pantalla de cuenta y sus campos
+  const [usuario, setUsuario] = useState(leerSesion);
+  const [modoCuenta, setModoCuenta] = useState("entrar"); // "entrar" o "registro"
+  const [datosCuenta, setDatosCuenta] = useState({ nombre: "", correo: "", clave: "" });
+  const [errorCuenta, setErrorCuenta] = useState("");
 
   // --- Funciones que puede hacer el usuario ---
 
@@ -185,12 +249,101 @@ function App() {
     }
   }
 
-  // HS-05a: confirma el pedido con los datos de contacto y vacía el carrito
-  function confirmarPedido(e) {
+  // HS-05a y HS-13: confirma el pedido, avisa al negocio por correo y vacía el carrito
+  async function confirmarPedido(e) {
     e.preventDefault();
+    setErrorPedido("");
     const numero = "GD-" + String(Date.now()).slice(-6);
-    setPedido({ numero, items: carrito, total, datos: datosPedido });
-    setCarrito([]);
+    const resumen = carrito
+      .map((item) => `${item.nombre} - grabado "${item.texto}" (${item.estilo}) - $${item.precio} MXN`)
+      .join("\n");
+
+    setEnviandoPedido(true);
+    try {
+      await enviarAlNegocio({
+        _subject: `Nuevo pedido ${numero}`,
+        nombre: datosPedido.nombre,
+        email: datosPedido.correo,
+        telefono: datosPedido.telefono,
+        direccion: datosPedido.direccion,
+        pedido: resumen,
+        total: `$${total} MXN`,
+      });
+      setPedido({ numero, items: carrito, total, datos: datosPedido });
+      setCarrito([]);
+    } catch (error) {
+      setErrorPedido("No se pudo enviar el aviso de tu pedido al negocio. Inténtalo de nuevo; tu carrito sigue guardado.");
+    } finally {
+      setEnviandoPedido(false);
+    }
+  }
+
+  function abrirCheckout() {
+    setPedido(null);
+    setErrorPedido("");
+    setVista("checkout");
+  }
+
+  // HS-06: rellena los formularios con los datos de la cuenta
+  function rellenarDatos(persona) {
+    setFormulario((anterior) => ({ ...anterior, nombre: persona.nombre, correo: persona.correo }));
+    setDatosPedido((anterior) => ({ ...anterior, nombre: persona.nombre, correo: persona.correo }));
+  }
+
+  // HS-06: crea una cuenta nueva
+  async function registrarCuenta(e) {
+    e.preventDefault();
+    setErrorCuenta("");
+    const correo = datosCuenta.correo.trim().toLowerCase();
+    const usuarios = leerAlmacen(CLAVE_USUARIOS, []);
+
+    if (usuarios.some((u) => u.correo === correo)) {
+      setErrorCuenta("Ya existe una cuenta con ese correo. Inicia sesión.");
+      return;
+    }
+    if (datosCuenta.clave.length < 6) {
+      setErrorCuenta("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    try {
+      const nuevo = { nombre: datosCuenta.nombre.trim(), correo, huella: await huellaDe(datosCuenta.clave) };
+      guardarAlmacen(CLAVE_USUARIOS, [...usuarios, nuevo]);
+      guardarAlmacen(CLAVE_SESION, correo);
+      setUsuario(nuevo);
+      rellenarDatos(nuevo);
+      setDatosCuenta({ nombre: "", correo: "", clave: "" });
+    } catch (error) {
+      setErrorCuenta("Tu navegador no permite crear cuentas en esta conexión.");
+    }
+  }
+
+  // HS-06: inicia sesión con una cuenta existente
+  async function iniciarSesion(e) {
+    e.preventDefault();
+    setErrorCuenta("");
+    const correo = datosCuenta.correo.trim().toLowerCase();
+    const encontrado = leerAlmacen(CLAVE_USUARIOS, []).find((u) => u.correo === correo);
+
+    try {
+      const huella = await huellaDe(datosCuenta.clave);
+      if (!encontrado || encontrado.huella !== huella) {
+        setErrorCuenta("Correo o contraseña incorrectos.");
+        return;
+      }
+      guardarAlmacen(CLAVE_SESION, correo);
+      setUsuario(encontrado);
+      rellenarDatos(encontrado);
+      setDatosCuenta({ nombre: "", correo: "", clave: "" });
+    } catch (error) {
+      setErrorCuenta("Tu navegador no permite iniciar sesión en esta conexión.");
+    }
+  }
+
+  function cerrarSesion() {
+    guardarAlmacen(CLAVE_SESION, null);
+    setUsuario(null);
+    setVista("catalogo");
   }
 
   const total = carrito.reduce((suma, item) => suma + item.precio, 0);
@@ -209,6 +362,10 @@ function App() {
         <button onClick={() => setVista("catalogo")}>Catálogo</button>
         <button onClick={() => setVista("carrito")}>Carrito ({carrito.length})</button>
         <button onClick={() => setVista("cotizacion")}>Cotización</button>
+        {/* HS-06: acceso a la cuenta */}
+        <button onClick={() => setVista("cuenta")}>
+          {usuario ? `Hola, ${usuario.nombre.split(" ")[0]}` : "Mi cuenta"}
+        </button>
       </nav>
 
       {/* HS-01: Catálogo de productos con filtro por categoría */}
@@ -302,14 +459,7 @@ function App() {
           ))}
           {carrito.length > 0 && <h3>Total: ${total} MXN</h3>}
           {carrito.length > 0 && (
-            <button
-              onClick={() => {
-                setPedido(null);
-                setVista("checkout");
-              }}
-            >
-              Continuar con la compra
-            </button>
+            <button onClick={abrirCheckout}>Continuar con la compra</button>
           )}
         </div>
       )}
@@ -328,6 +478,7 @@ function App() {
                 coordinar el pago y la entrega.
               </p>
               <p>Total: ${pedido.total} MXN</p>
+              <p>Enviamos el aviso de tu pedido por correo al negocio.</p>
               <button onClick={() => setVista("catalogo")}>Volver al catálogo</button>
             </div>
           ) : carrito.length === 0 ? (
@@ -383,7 +534,83 @@ function App() {
                     onChange={(e) => setDatosPedido({ ...datosPedido, direccion: e.target.value })}
                   />
                 </label>
-                <button type="submit">Confirmar pedido</button>
+                {errorPedido && <p className="error">{errorPedido}</p>}
+                <button type="submit" disabled={enviandoPedido}>
+                  {enviandoPedido ? "Enviando pedido..." : "Confirmar pedido"}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* HS-06: Registro e inicio de sesión */}
+      {vista === "cuenta" && (
+        <div>
+          <h2>Mi cuenta</h2>
+
+          {usuario ? (
+            <div className="tarjeta tarjeta-ancha">
+              <p>Nombre: <strong>{usuario.nombre}</strong></p>
+              <p>Correo: <strong>{usuario.correo}</strong></p>
+              <p>Tus datos se rellenan solos en el checkout y en la cotización.</p>
+              <button onClick={cerrarSesion}>Cerrar sesión</button>
+            </div>
+          ) : (
+            <div>
+              <div className="filtros">
+                <button
+                  className={modoCuenta === "entrar" ? "activo" : ""}
+                  onClick={() => {
+                    setModoCuenta("entrar");
+                    setErrorCuenta("");
+                  }}
+                >
+                  Iniciar sesión
+                </button>
+                <button
+                  className={modoCuenta === "registro" ? "activo" : ""}
+                  onClick={() => {
+                    setModoCuenta("registro");
+                    setErrorCuenta("");
+                  }}
+                >
+                  Crear cuenta
+                </button>
+              </div>
+
+              <form onSubmit={modoCuenta === "registro" ? registrarCuenta : iniciarSesion}>
+                {modoCuenta === "registro" && (
+                  <label>
+                    Nombre:
+                    <input
+                      type="text"
+                      required
+                      value={datosCuenta.nombre}
+                      onChange={(e) => setDatosCuenta({ ...datosCuenta, nombre: e.target.value })}
+                    />
+                  </label>
+                )}
+                <label>
+                  Correo:
+                  <input
+                    type="email"
+                    required
+                    value={datosCuenta.correo}
+                    onChange={(e) => setDatosCuenta({ ...datosCuenta, correo: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Contraseña:
+                  <input
+                    type="password"
+                    required
+                    value={datosCuenta.clave}
+                    onChange={(e) => setDatosCuenta({ ...datosCuenta, clave: e.target.value })}
+                  />
+                </label>
+                {errorCuenta && <p className="error">{errorCuenta}</p>}
+                <button type="submit">{modoCuenta === "registro" ? "Crear cuenta" : "Entrar"}</button>
               </form>
             </div>
           )}
