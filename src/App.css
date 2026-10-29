@@ -192,3 +192,16 @@ button:disabled {
     padding: 18px;
   }
 }
+
+/* HS-10: buscador y orden */
+.buscador {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* HS-08: galería */
+.lista-productos .vista-producto {
+  margin: 0 auto 8px;
+}

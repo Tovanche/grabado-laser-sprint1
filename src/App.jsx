@@ -99,6 +99,19 @@ function VistaProducto({ producto, texto, fuente }) {
   );
 }
 
+// HS-08: ejemplos de trabajos grabados para la galería
+const trabajosGaleria = [
+  { producto: "Cartera de cuero", texto: "Carlos R.", estilo: "Clásica" },
+  { producto: "Playera de algodón", texto: "Mamá", estilo: "Manuscrita" },
+  { producto: "Vaso de aluminio", texto: "Mi vaso", estilo: "Moderna" },
+  { producto: "Vaso de cristal", texto: "Salud", estilo: "Máquina de escribir" },
+];
+
+// HS-10: quita acentos y mayúsculas para que la búsqueda no distinga entre "Cartera" y "cartéra"
+function normalizar(texto) {
+  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 // HS-09: dirección del servicio que recibe el formulario y lo manda al correo del negocio.
 // Se crea un formulario gratis en https://formspree.io y se guarda su URL en el archivo .env:
 // VITE_FORM_URL=https://formspree.io/f/xxxxxxxx
@@ -157,6 +170,10 @@ function App() {
   // HS-01: categoría seleccionada en el filtro
   const [categoriaActiva, setCategoriaActiva] = useState("Todas");
 
+  // HS-10: texto de búsqueda y orden por precio
+  const [busqueda, setBusqueda] = useState("");
+  const [orden, setOrden] = useState("ninguno");
+
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
   const [textoGrabado, setTextoGrabado] = useState("");
@@ -200,6 +217,15 @@ function App() {
     setProductoSeleccionado(producto);
     setTextoGrabado("");
     setEstiloLetra(estilosLetra[0].nombre);
+    setVista("detalle");
+  }
+
+  // HS-08: abre el detalle con el texto y el estilo del ejemplo elegido en la galería
+  function usarDiseno(trabajo) {
+    const producto = productos.find((p) => p.nombre === trabajo.producto);
+    setProductoSeleccionado(producto);
+    setTextoGrabado(trabajo.texto);
+    setEstiloLetra(trabajo.estilo);
     setVista("detalle");
   }
 
@@ -348,11 +374,11 @@ function App() {
 
   const total = carrito.reduce((suma, item) => suma + item.precio, 0);
 
-  // HS-01: productos que se muestran según el filtro
-  const productosFiltrados =
-    categoriaActiva === "Todas"
-      ? productos
-      : productos.filter((producto) => producto.categoria === categoriaActiva);
+  // HS-01 y HS-10: productos que se muestran según la categoría, la búsqueda y el orden
+  const productosFiltrados = productos
+    .filter((producto) => categoriaActiva === "Todas" || producto.categoria === categoriaActiva)
+    .filter((producto) => normalizar(producto.nombre).includes(normalizar(busqueda.trim())))
+    .sort((a, b) => (orden === "menor" ? a.precio - b.precio : orden === "mayor" ? b.precio - a.precio : 0));
 
   // --- Lo que se dibuja en pantalla ---
   return (
@@ -361,6 +387,7 @@ function App() {
       <nav className="nav">
         <button onClick={() => setVista("catalogo")}>Catálogo</button>
         <button onClick={() => setVista("carrito")}>Carrito ({carrito.length})</button>
+        <button onClick={() => setVista("galeria")}>Galería</button>
         <button onClick={() => setVista("cotizacion")}>Cotización</button>
         {/* HS-06: acceso a la cuenta */}
         <button onClick={() => setVista("cuenta")}>
@@ -386,6 +413,29 @@ function App() {
             ))}
           </div>
 
+          {/* HS-10: buscador y orden por precio */}
+          <div className="buscador">
+            <label>
+              Buscar producto:
+              <input
+                type="search"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Ejemplo: vaso"
+              />
+            </label>
+            <label>
+              Ordenar por precio:
+              <select value={orden} onChange={(e) => setOrden(e.target.value)}>
+                <option value="ninguno">Sin orden</option>
+                <option value="menor">Del más barato al más caro</option>
+                <option value="mayor">Del más caro al más barato</option>
+              </select>
+            </label>
+          </div>
+
+          {productosFiltrados.length === 0 && <p>No encontramos productos con esa búsqueda.</p>}
+
           <div className="lista-productos">
             {productosFiltrados.map((producto) => (
               <div className="tarjeta" key={producto.id}>
@@ -393,6 +443,28 @@ function App() {
                 <p>{producto.categoria}</p>
                 <p>${producto.precio} MXN</p>
                 <button onClick={() => abrirDetalle(producto)}>Personalizar</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* HS-08: Galería de ejemplos de grabado */}
+      {vista === "galeria" && (
+        <div>
+          <h2>Galería de trabajos</h2>
+          <p>Ejemplos de grabado láser. Elige uno para personalizarlo con tu propio texto.</p>
+          <div className="lista-productos">
+            {trabajosGaleria.map((trabajo) => (
+              <div className="tarjeta" key={trabajo.producto}>
+                <VistaProducto
+                  producto={productos.find((p) => p.nombre === trabajo.producto)}
+                  texto={trabajo.texto}
+                  fuente={fuenteDe(trabajo.estilo)}
+                />
+                <h3>{trabajo.producto}</h3>
+                <p>Estilo: {trabajo.estilo}</p>
+                <button onClick={() => usarDiseno(trabajo)}>Quiero uno igual</button>
               </div>
             ))}
           </div>
