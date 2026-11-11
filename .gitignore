@@ -1,0 +1,12 @@
+# Dependencias y resultado de compilar
+node_modules
+dist
+
+# Variables de entorno reales (no se suben; usa .env.example como plantilla)
+.env
+.env.local
+.env.*.local
+
+# Registros y archivos del sistema
+*.log
+.DS_Store
