@@ -19,6 +19,30 @@ const estilosLetra = [
   { nombre: "Máquina de escribir", fuente: "'Courier New', monospace" },
 ];
 
+// --- Menú final: actividades del curso y modificaciones realizadas ---
+const actividadesCurso = [
+  { fecha: "06/09/2026", nombre: "Actividad integradora: Sprint, el corazón de SCRUM", detalle: "Product Backlog inicial (14 historias), fichas y calendarización del Sprint 1." },
+  { fecha: "23/09/2026", nombre: "Actividad integradora 2: El backlog y el Sprint Schedule", detalle: "Planeación del caso Sitio web de contenido educativo: 16 historias, 3 sprint y prototipo probado." },
+  { fecha: "28/10/2026", nombre: "Actividad integradora. Producto final U3", detalle: "Cierre de 4 sprint: 52 de 74 puntos terminados (70 %)." },
+  { fecha: "04/11/2026", nombre: "Unidad 4, Actividad 1: Reunión de revisión inicial", detalle: "Reporte de roles y 7 propuestas de modificación (P1 a P7)." },
+  { fecha: "11/11/2026", nombre: "Unidad 4, Actividad 2: Reunión para revisión de modificaciones", detalle: "Se aplicaron P1, P2, P3 y P8; retrospectiva del proyecto." },
+  { fecha: "23/11/2026", nombre: "Actividad final: Producto final y documentación", detalle: "Menú, sistema implementado, código fuente comprimido y reporte de modificaciones." },
+];
+
+const modificacionesRealizadas = [
+  { id: "P1", texto: "Título de la página corregido a \"Grabado Láser\" (index.html).", estado: "Aplicada" },
+  { id: "P2", texto: "README.md con los pasos para instalar y ejecutar el proyecto.", estado: "Aplicada" },
+  { id: "P3", texto: ".env.example con la variable VITE_FORM_URL.", estado: "Aplicada" },
+  { id: "P8", texto: ".gitignore para no subir node_modules, dist ni .env.", estado: "Aplicada" },
+  { id: "P4", texto: "Servidor propio para cuentas, pedidos y pago (HS-05b, HS-06, HS-07, HS-14).", estado: "Backlog posterior" },
+  { id: "P5", texto: "Copia de confirmación al cliente con otro servicio de correo (HS-13b).", estado: "Backlog posterior" },
+  { id: "P6", texto: "Fotos de trabajos reales en la galería (HS-08).", estado: "Backlog posterior" },
+  { id: "P7", texto: "Reseñas y calificaciones de clientes (HS-12).", estado: "Backlog posterior" },
+];
+
+const ligaCodigoComprimido = "https://github.com/Tovanche/grabado-laser-sprint1/archive/refs/heads/main.zip";
+const ligaRepositorio = "https://github.com/Tovanche/grabado-laser-sprint1";
+
 function fuenteDe(nombreEstilo) {
   const estilo = estilosLetra.find((e) => e.nombre === nombreEstilo);
   return estilo ? estilo.fuente : "inherit";
@@ -166,6 +190,8 @@ async function huellaDe(texto) {
 
 function App() {
   const [vista, setVista] = useState("catalogo");
+  // Menú final: sección abierta ("actividades", "sistema", "codigo" o "reporte")
+  const [seccionMenu, setSeccionMenu] = useState("actividades");
 
   // HS-01: categoría seleccionada en el filtro
   const [categoriaActiva, setCategoriaActiva] = useState("Todas");
@@ -385,6 +411,7 @@ function App() {
     <div className="app">
       {/* Barra de navegación simple */}
       <nav className="nav">
+        <button className="boton-menu" onClick={() => setVista("menu")}>☰ Menú</button>
         <button onClick={() => setVista("catalogo")}>Catálogo</button>
         <button onClick={() => setVista("carrito")}>Carrito ({carrito.length})</button>
         <button onClick={() => setVista("galeria")}>Galería</button>
@@ -394,6 +421,65 @@ function App() {
           {usuario ? `Hola, ${usuario.nombre.split(" ")[0]}` : "Mi cuenta"}
         </button>
       </nav>
+
+      {/* Menú final: actividades, sistema, código fuente y reporte de modificaciones */}
+      {vista === "menu" && (
+        <div className="menu-final">
+          <h2>Menú</h2>
+          <div className="menu-opciones">
+            <button className={seccionMenu === "actividades" ? "activa" : ""} onClick={() => setSeccionMenu("actividades")}>Actividades realizadas en el curso</button>
+            <button className={seccionMenu === "sistema" ? "activa" : ""} onClick={() => setSeccionMenu("sistema")}>Sistema implementado</button>
+            <button className={seccionMenu === "codigo" ? "activa" : ""} onClick={() => setSeccionMenu("codigo")}>Código fuente (comprimido)</button>
+            <button className={seccionMenu === "reporte" ? "activa" : ""} onClick={() => setSeccionMenu("reporte")}>Reporte de las modificaciones realizadas</button>
+          </div>
+
+          {seccionMenu === "actividades" && (
+            <div className="menu-contenido">
+              <h3>Actividades realizadas en el curso</h3>
+              <ol>
+                {actividadesCurso.map((actividad) => (
+                  <li key={actividad.nombre}>
+                    <strong>{actividad.nombre}</strong> <span>({actividad.fecha})</span>
+                    <p>{actividad.detalle}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {seccionMenu === "sistema" && (
+            <div className="menu-contenido">
+              <h3>Sistema implementado</h3>
+              <p>Tienda en línea de productos personalizados con grabado láser, hecha con React y Vite. Terminó 11 de 16 historias (52 de 74 puntos).</p>
+              <button onClick={() => setVista("catalogo")}>Abrir la tienda</button>
+            </div>
+          )}
+
+          {seccionMenu === "codigo" && (
+            <div className="menu-contenido">
+              <h3>Código fuente (comprimido)</h3>
+              <p>Descarga el código del proyecto en un archivo .zip o revisa el repositorio en GitHub.</p>
+              <p>
+                <a href={ligaCodigoComprimido} className="enlace-boton">Descargar código (.zip)</a>{" "}
+                <a href={ligaRepositorio} className="enlace-boton" target="_blank" rel="noreferrer">Ver repositorio en GitHub</a>
+              </p>
+            </div>
+          )}
+
+          {seccionMenu === "reporte" && (
+            <div className="menu-contenido">
+              <h3>Reporte de las modificaciones realizadas</h3>
+              <ul>
+                {modificacionesRealizadas.map((m) => (
+                  <li key={m.id}>
+                    <strong>{m.id}</strong>: {m.texto} <em>({m.estado})</em>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* HS-01: Catálogo de productos con filtro por categoría */}
       {vista === "catalogo" && (

@@ -205,3 +205,12 @@ button:disabled {
 .lista-productos .vista-producto {
   margin: 0 auto 8px;
 }
+
+/* Menú final */
+.nav .boton-menu { font-weight: bold; }
+.menu-opciones { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.menu-opciones button.activa { font-weight: bold; text-decoration: underline; }
+.menu-contenido { padding: 12px 0; }
+.menu-contenido li { margin-bottom: 10px; }
+.menu-contenido li p { margin: 2px 0 0; }
+.enlace-boton { display: inline-block; padding: 8px 14px; margin: 4px 4px 4px 0; border: 1px solid currentColor; border-radius: 6px; text-decoration: none; }
